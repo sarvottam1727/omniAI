@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI Email Shooter</title>
+  <style>
+    :root{--bg:#eef2f6;--panel:#fff;--ink:#172033;--muted:#667085;--line:#d7dee8;--accent:#0f766e;--blue:#2563eb;--warn:#b45309;--danger:#be123c;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink)} button,input,select,textarea{font:inherit} button{cursor:pointer}
+    main{min-height:100vh;display:grid;grid-template-columns:280px 1fr}.sidebar{background:#111827;color:#f9fafb;padding:22px 16px;display:flex;flex-direction:column;gap:22px}
+    .brand{display:flex;align-items:center;gap:12px;padding:4px 6px 18px;border-bottom:1px solid rgba(255,255,255,.12)}.mark{width:38px;height:38px;display:grid;place-items:center;border-radius:8px;background:#14b8a6;font-weight:900;color:#052f2b}.brand small{display:block;color:#9ca3af;margin-top:2px}
+    nav{display:grid;gap:6px}nav button{width:100%;min-height:42px;border:0;border-radius:8px;background:transparent;color:#d1d5db;display:flex;align-items:center;gap:10px;padding:0 12px;text-align:left}nav button.active,nav button:hover{background:#1f2937;color:#fff}
+    .content{padding:30px;overflow:auto}.screen{display:none;gap:22px;max-width:1240px}.screen.active{display:grid}.row{display:flex;align-items:start;justify-content:space-between;gap:18px}.eyebrow{color:var(--accent);font-weight:900;text-transform:uppercase;font-size:12px;margin:0 0 6px;letter-spacing:0}h1{margin:0;font-size:32px;line-height:1.1;letter-spacing:0}h2{margin:0 0 14px;font-size:19px}.hint{color:var(--muted);line-height:1.5;margin:6px 0 0}
+    .primary,.secondary,.danger{min-height:42px;border:1px solid transparent;border-radius:8px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800;white-space:nowrap}.primary{background:var(--accent);color:#fff}.secondary{background:#fff;color:var(--ink);border-color:var(--line)}.danger{background:#fff1f2;color:#be123c;border-color:#fecdd3}.primary:disabled,.secondary:disabled{opacity:.5;cursor:not-allowed}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;display:grid;gap:10px;min-height:110px}.stat span{color:var(--muted);font-size:14px}.stat strong{font-size:30px}.good strong{color:var(--accent)}.caution strong{color:var(--warn)}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.stack{display:grid;gap:14px}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    label{display:grid;gap:7px;color:var(--muted);font-weight:800;font-size:13px}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;min-height:42px;padding:10px 12px;color:var(--ink);background:#fff}textarea{min-height:130px;resize:vertical;line-height:1.5}.code{min-height:260px;font-family:Consolas,"Courier New",monospace;font-size:13px}
+    table{width:100%;border-collapse:collapse}th,td{padding:12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}th{color:var(--muted);font-size:13px}.pill{display:inline-flex;min-height:26px;align-items:center;border-radius:999px;padding:0 10px;background:#edf2f7;font-size:12px;font-weight:900}.ok{color:#047857;background:#d1fae5}.warn{color:#92400e;background:#fef3c7}.bad{color:#be123c;background:#ffe4e6}.info{color:#1d4ed8;background:#dbeafe}
+    .checks{display:grid;gap:10px}.check{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:8px}.check strong{display:block}.check p{margin:4px 0 0;color:var(--muted)}.dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font-weight:900}
+    .warning{border:1px solid #fed7aa;background:#fff7ed;color:#7c2d12;border-radius:8px;padding:16px;line-height:1.5}.toast{position:fixed;right:18px;bottom:18px;max-width:480px;background:#111827;color:white;border-radius:8px;padding:12px 14px;opacity:0;transform:translateY(10px);transition:.2s;z-index:5}.toast.show{opacity:1;transform:translateY(0)}pre{background:#0f172a;color:#d1fae5;border-radius:8px;padding:14px;overflow:auto;white-space:pre-wrap;max-height:320px}
+    @media(max-width:950px){main{grid-template-columns:1fr}.content{padding:18px}nav{grid-template-columns:repeat(2,minmax(0,1fr))}.stats,.grid,.three{grid-template-columns:1fr}.row{display:grid}h1{font-size:26px}}
+  </style>
+</head>
+<body>
+<main>
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">O</span><div><strong>OmniAI</strong><small>Email Shooter</small></div></div>
+    <nav id="nav"></nav>
+  </aside>
+  <section class="content">
+    <section id="Dashboard" class="screen active">
+      <div class="row"><div><p class="eyebrow">Working local bulk email app</p><h1>Campaign sender with SMTP and Gmail</h1><p class="hint">Configure the sender ID, upload recipients, create a campaign, validate compliance, send a test, then send the batch.</p></div><button class="primary" data-go="Campaign">New campaign</button></div>
+      <div class="stats" id="stats"></div>
+      <div class="panel"><h2>Fast workflow</h2><div class="grid three"><button class="secondary" data-go="Guide">Start guide</button><button class="secondary" data-go="Sender">1. Add sender ID</button><button class="secondary" data-go="Contacts">2. Upload Excel/CSV</button><button class="secondary" data-go="Campaign">3. Compose and send</button><button class="secondary" data-go="Logs">4. Check logs</button><button class="secondary" data-go="Suppression">5. Review suppression</button></div></div>
+      <div class="warning">Use this only for lawful consent-based emailing. The app blocks suppressed, bounced, complained and unknown-consent contacts for marketing campaigns. It does not include spam evasion or provider-limit bypass logic.</div>
+    </section>
+
+    <section id="Guide" class="screen">
+      <div><p class="eyebrow">End-user setup</p><h1>Gmail and SMTP sending guide</h1><p class="hint">Use this path for a smooth client handoff while keeping provider rules and consent rules intact.</p></div>
+      <div class="grid">
+        <div class="panel stack">
+          <h2>Gmail process</h2>
+          <div class="checks">
+            <div class="check"><span class="dot ok">1</span><div><strong>Enable 2-Step Verification</strong><p>Google requires it before app passwords are available.</p></div></div>
+            <div class="check"><span class="dot ok">2</span><div><strong>Create a Gmail app password</strong><p>Use the app password here. Normal Gmail passwords will fail SMTP login.</p></div></div>
+            <div class="check"><span class="dot ok">3</span><div><strong>Use the Gmail preset</strong><p>smtp.gmail.com, port 587, STARTTLS, username equal to Gmail address.</p></div></div>
+            <div class="check"><span class="dot ok">4</span><div><strong>Test before bulk send</strong><p>Run connection test and send a test email before sending to the list.</p></div></div>
+          </div>
+        </div>
+        <div class="panel stack">
+          <h2>Bulk safety logic</h2>
+          <div class="checks">
+            <div class="check"><span class="dot ok">Y</span><div><strong>Consent filtering</strong><p>Unknown, unsubscribed, bounced and complained contacts are excluded.</p></div></div>
+            <div class="check"><span class="dot ok">Y</span><div><strong>Rate respect</strong><p>The campaign uses sender daily limits and per-recipient delay. It never bypasses provider limits.</p></div></div>
+            <div class="check"><span class="dot ok">Y</span><div><strong>Required footer</strong><p>Physical address and unsubscribe link are required for marketing/newsletter sends.</p></div></div>
+            <div class="check"><span class="dot warn">!</span><div><strong>Dry run available</strong><p>Use Safe Dry Run to validate the workflow without sending real email.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="Sender" class="screen">
+      <div><p class="eyebrow">From account selection</p><h1>SMTP and Gmail sender setup</h1><p class="hint">For Gmail, use smtp.gmail.com, port 587, STARTTLS, full Gmail address as username, and a Google app password. Normal Google account passwords are not accepted by Gmail SMTP.</p></div>
+      <div class="panel stack">
+        <div class="grid three">
+          <label>Provider<select id="provider"><option value="gmail">Gmail SMTP</option><option value="smtp">Custom SMTP</option><option value="mailpit">Local Mailpit/MailHog</option><option value="dryrun">Safe Dry Run</option></select></label>
+          <label>Sender ID / Label<input id="label" value="Gmail sender"></label>
+          <label>From email<input id="sender_email" placeholder="you@gmail.com"></label>
+          <label>Sender name<input id="sender_name" value="Sarvottam Team"></label>
+          <label>Reply-To<input id="reply_to" placeholder="reply@example.com"></label>
+          <label>Physical address<input id="physical_address" value="123 Compliance Street, Pune, India"></label>
+          <label>SMTP host<input id="host" value="smtp.gmail.com"></label>
+          <label>SMTP port<input id="port" type="number" value="587"></label>
+          <label>Encryption<select id="encryption"><option value="starttls">STARTTLS</option><option value="ssl">SSL</option><option value="none">None</option></select></label>
+          <label>SMTP username<input id="username" placeholder="usually same as From email"></label>
+          <label>SMTP password / Gmail app password<input id="password" type="password" placeholder="kept in server memory only"></label>
+          <label>Daily limit<input id="daily_limit" type="number" value="500"></label>
+        </div>
+        <div class="actions"><button class="primary" id="saveSender">Save sender ID</button><button class="secondary" id="testSender">Test selected sender</button><button class="secondary" id="gmailPreset">Use Gmail preset</button><button class="secondary" id="mailpitPreset">Use local Mailpit preset</button><button class="secondary" id="dryRunPreset">Use dry run</button></div>
+        <div id="senderTestResult" class="warning">Save a sender, select it in Campaign, then test the connection here.</div>
+      </div>
+      <div class="panel"><h2>Saved sender IDs</h2><table><thead><tr><th>ID</th><th>Provider</th><th>From</th><th>Host</th><th>Secret</th></tr></thead><tbody id="senderRows"></tbody></table></div>
+    </section>
+
+    <section id="Contacts" class="screen">
+      <div class="row"><div><p class="eyebrow">Recipient upload</p><h1>Upload Excel or CSV email list</h1><p class="hint">Required column: email. Optional columns: first_name, last_name, company, consent_status, tags. Marketing sends only include opted_in, soft_opt_in, or transactional contacts.</p></div><a class="secondary" href="/example_contacts.csv" download>Download sample CSV</a></div>
+      <div class="panel stack">
+        <label>Upload .csv or .xlsx<input id="contactFile" type="file" accept=".csv,.xlsx"></label>
+        <div class="actions"><button class="primary" id="uploadContacts">Upload contacts</button><span id="uploadResult" class="hint"></span></div>
+      </div>
+      <div class="panel"><h2>Contacts</h2><table><thead><tr><th>Email</th><th>Name</th><th>Company</th><th>Source</th><th>Consent</th></tr></thead><tbody id="contactRows"></tbody></table></div>
+    </section>
+
+    <section id="Campaign" class="screen">
+      <div><p class="eyebrow">Campaign builder</p><h1>Paste code, validate, test, and send bulk mail</h1></div>
+      <div class="grid">
+        <div class="panel stack">
+          <h2>Campaign details</h2>
+          <label>Sender ID<select id="campaignSender"></select></label>
+          <label>Campaign name<input id="campaignName" value="May newsletter"></label>
+          <label>Campaign type<select id="campaignType"><option value="newsletter">newsletter</option><option value="marketing">marketing</option><option value="transactional">transactional</option><option value="sales_outreach">sales_outreach</option><option value="job_outreach">job_outreach</option><option value="follow_up">follow_up</option></select></label>
+          <label>Subject<input id="subject" value="What changed in OmniAI this month"></label>
+          <label>Purpose<textarea id="purpose">Monthly product update to contacts who opted in.</textarea></label>
+          <label>Delay per recipient, seconds<input id="delay" type="number" min="0" step="0.1" value="0.2"></label>
+        </div>
+        <div class="panel stack">
+          <h2>Paste HTML/code</h2>
+          <textarea id="htmlBody" class="code"><h2>Hi {{first_name}},</h2>
+<p>Here is your update from {{sender_name}}.</p>
+<p><a href="{{unsubscribe_url}}">Unsubscribe</a></p>
+<p>{{physical_address}}</p></textarea>
+          <label>Plain text fallback<textarea id="plainBody">Hi {{first_name}},
+
+Here is your update from {{sender_name}}.
+
+Unsubscribe: {{unsubscribe_url}}
+
+{{physical_address}}</textarea></label>
+        </div>
+      </div>
+      <div class="panel stack">
+        <div class="actions"><button class="primary" id="saveCampaign">Save and validate</button><input id="testEmail" placeholder="test@example.com" style="max-width:260px"><button class="secondary" id="sendTest" disabled>Send test email</button><button class="primary" id="sendBulk" disabled>Send bulk campaign</button></div>
+        <div class="warning">For Gmail, run Test selected sender and Send test email before bulk send. The app uses delay and configured limits; it will not rotate accounts or bypass Gmail/provider limits.</div>
+        <div class="grid"><div><h2>Compliance checks</h2><div id="checks" class="checks"></div></div><div><h2>Excluded recipients</h2><table><thead><tr><th>Email</th><th>Reason</th></tr></thead><tbody id="exclusions"></tbody></table></div></div>
+      </div>
+    </section>
+
+    <section id="Logs" class="screen">
+      <div><p class="eyebrow">Campaign activity</p><h1>Send logs and campaign status</h1></div>
+      <div class="panel"><h2>Campaigns</h2><table><thead><tr><th>Name</th><th>Type</th><th>Subject</th><th>Status</th><th>Recipients</th></tr></thead><tbody id="campaignRows"></tbody></table></div>
+      <div class="panel"><h2>Email events</h2><table><thead><tr><th>Time</th><th>Email</th><th>Event</th><th>Reason</th></tr></thead><tbody id="eventRows"></tbody></table></div>
+    </section>
+
+    <section id="Suppression" class="screen">
+      <div><p class="eyebrow">Safety rules</p><h1>Suppression list</h1></div>
+      <div class="panel"><table><thead><tr><th>Email</th><th>Reason</th><th>Source</th><th>Created</th></tr></thead><tbody id="suppressionRows"></tbody></table></div>
+    </section>
+
+    <section id="Api" class="screen">
+      <div><p class="eyebrow">Developer view</p><h1>Local API output</h1></div>
+      <div class="panel"><pre id="apiDump"></pre></div>
+    </section>
+  </section>
+</main>
+<div id="toast" class="toast">Ready</div>
+<script>
+const screens = ["Dashboard","Guide","Sender","Contacts","Campaign","Logs","Suppression","Api"];
+const nav = document.getElementById("nav");
+const toast = document.getElementById("toast");
+let state = {};
+let currentCampaignId = "";
+
+function showToast(message){toast.textContent=message;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2600)}
+function show(name){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",s.id===name));document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.target===name))}
+screens.forEach(name=>{const b=document.createElement("button");b.dataset.target=name;b.innerHTML=`<span>${name==="Dashboard"?"#":name==="Campaign"?"@":name==="Sender"?"ID":"-"}</span><span>${name}</span>`;b.onclick=()=>show(name);nav.appendChild(b)});
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.go)));
+
+async function api(path, options={}){
+  const response = await fetch(path, options);
+  const data = await response.json();
+  if(!response.ok || data.ok===false){throw new Error(data.message || "Request failed")}
+  return data;
+}
+
+async function refresh(){
+  state = await api("/api/state");
+  renderStats(); renderSenders(); renderContacts(); renderCampaigns(); renderSuppression(); renderEvents();
+  document.getElementById("apiDump").textContent = JSON.stringify(state, null, 2);
+}
+
+function renderStats(){
+  const contacts = state.contacts || [];
+  const events = state.events || [];
+  const sent = events.filter(e=>e.event==="sent").length;
+  const failed = events.filter(e=>e.event==="failed").length;
+  document.getElementById("stats").innerHTML = [
+    ["Sender IDs",(state.senders||[]).length,""],
+    ["Contacts",contacts.length,""],
+    ["Sent",sent,"good"],
+    ["Failed",failed,"caution"]
+  ].map(([label,value,tone])=>`<div class="stat ${tone}"><span>${label}</span><strong>${value}</strong></div>`).join("");
+}
+
+function renderSenders(){
+  const rows = (state.senders||[]).map(s=>`<tr><td>${s.label}</td><td><span class="pill info">${s.provider}</span></td><td>${s.sender_email}</td><td>${s.host}:${s.port}</td><td>${s.password_configured?"configured":"not saved"}</td></tr>`).join("");
+  document.getElementById("senderRows").innerHTML = rows || `<tr><td colspan="5">No senders yet.</td></tr>`;
+  document.getElementById("campaignSender").innerHTML = (state.senders||[]).map(s=>`<option value="${s.id}">${s.label} - ${s.sender_email}</option>`).join("");
+}
+
+function consentClass(value){return ["opted_in","soft_opt_in","transactional"].includes(value)?"ok":value==="unknown"?"warn":"bad"}
+function renderContacts(){
+  document.getElementById("contactRows").innerHTML = (state.contacts||[]).map(c=>`<tr><td>${c.email}</td><td>${c.first_name||""} ${c.last_name||""}</td><td>${c.company||""}</td><td>${c.source||""}</td><td><span class="pill ${consentClass(c.consent_status)}">${c.consent_status}</span></td></tr>`).join("") || `<tr><td colspan="5">Upload contacts to begin.</td></tr>`;
+}
+
+function renderCampaigns(){
+  document.getElementById("campaignRows").innerHTML = (state.campaigns||[]).map(c=>`<tr><td>${c.name}</td><td>${c.campaign_type}</td><td>${c.subject}</td><td><span class="pill info">${c.status}</span></td><td>${(c.recipients||[]).length}</td></tr>`).join("") || `<tr><td colspan="5">No campaigns yet.</td></tr>`;
+}
+
+function renderEvents(){
+  document.getElementById("eventRows").innerHTML = (state.events||[]).slice().reverse().map(e=>`<tr><td>${new Date(e.created_at).toLocaleString()}</td><td>${e.email}</td><td><span class="pill ${e.event==="sent"?"ok":"bad"}">${e.event}${e.test?" test":""}</span></td><td>${e.reason||""}</td></tr>`).join("") || `<tr><td colspan="4">No events yet.</td></tr>`;
+}
+
+function renderSuppression(){
+  document.getElementById("suppressionRows").innerHTML = (state.suppression||[]).map(s=>`<tr><td>${s.email}</td><td>${s.reason}</td><td>${s.source}</td><td>${new Date(s.created_at).toLocaleString()}</td></tr>`).join("") || `<tr><td colspan="4">No suppression entries.</td></tr>`;
+}
+
+function renderValidation(validation){
+  document.getElementById("checks").innerHTML = validation.checks.map(c=>`<div class="check"><span class="dot ${c.ok?"ok":c.severity==="warning"?"warn":"bad"}">${c.ok?"Y":c.severity==="warning"?"!":"X"}</span><div><strong>${c.key}</strong><p>${c.message}</p></div></div>`).join("") + `<div class="warning">Eligible: ${validation.eligible_count}. Excluded: ${validation.excluded_count}. Can send: ${validation.can_send ? "yes" : "no"}.</div>`;
+  document.getElementById("exclusions").innerHTML = validation.exclusions.map(e=>`<tr><td>${e.email}</td><td>${e.reason}</td></tr>`).join("") || `<tr><td colspan="2">No excluded recipients.</td></tr>`;
+  document.getElementById("sendTest").disabled = false;
+  document.getElementById("sendBulk").disabled = !validation.can_send;
+}
+
+function campaignPayload(){
+  return {
+    sender_id: document.getElementById("campaignSender").value,
+    name: document.getElementById("campaignName").value,
+    campaign_type: document.getElementById("campaignType").value,
+    subject: document.getElementById("subject").value,
+    purpose: document.getElementById("purpose").value,
+    html_body: document.getElementById("htmlBody").value,
+    plain_body: document.getElementById("plainBody").value,
+    delay_seconds: Number(document.getElementById("delay").value || 0.2)
+  }
+}
+
+document.getElementById("gmailPreset").onclick = () => {
+  document.getElementById("provider").value="gmail"; document.getElementById("host").value="smtp.gmail.com"; document.getElementById("port").value="587"; document.getElementById("encryption").value="starttls"; showToast("Gmail preset applied. Use a Gmail app password.");
+};
+document.getElementById("mailpitPreset").onclick = () => {
+  document.getElementById("provider").value="mailpit"; document.getElementById("label").value="Local Mailpit"; document.getElementById("sender_email").value="dev@omniai.local"; document.getElementById("reply_to").value="support@omniai.local"; document.getElementById("host").value="127.0.0.1"; document.getElementById("port").value="1025"; document.getElementById("encryption").value="none"; showToast("Local Mailpit preset applied.");
+};
+document.getElementById("dryRunPreset").onclick = () => {
+  document.getElementById("provider").value="dryrun"; document.getElementById("label").value="Safe Dry Run"; document.getElementById("sender_email").value="dryrun@omniai.local"; document.getElementById("reply_to").value="support@omniai.local"; document.getElementById("host").value="dryrun.local"; document.getElementById("port").value="0"; document.getElementById("encryption").value="none"; showToast("Dry run preset applied. No real emails will be sent.");
+};
+
+document.getElementById("saveSender").onclick = async () => {
+  const payload = {};
+  ["provider","label","sender_email","sender_name","reply_to","physical_address","host","port","encryption","username","password","daily_limit"].forEach(id=>payload[id]=document.getElementById(id).value);
+  try{await api("/api/senders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); await refresh(); showToast("Sender ID saved.");}
+  catch(err){showToast(err.message)}
+};
+document.getElementById("testSender").onclick = async () => {
+  const senderId = document.getElementById("campaignSender").value || (state.senders && state.senders[0] && state.senders[0].id);
+  if(!senderId){showToast("Save a sender first.");return}
+  try{const result = await api("/api/senders/test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sender_id:senderId})}); document.getElementById("senderTestResult").textContent=result.message; showToast(result.message);}
+  catch(err){document.getElementById("senderTestResult").textContent=err.message; showToast(err.message)}
+};
+
+document.getElementById("uploadContacts").onclick = async () => {
+  const file = document.getElementById("contactFile").files[0];
+  if(!file){showToast("Choose a CSV or XLSX file first.");return}
+  const form = new FormData(); form.append("file", file);
+  try{const result = await api("/api/import",{method:"POST",body:form}); document.getElementById("uploadResult").textContent=`Imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}`; await refresh(); showToast("Contacts uploaded.");}
+  catch(err){showToast(err.message)}
+};
+
+document.getElementById("saveCampaign").onclick = async () => {
+  try{const result = await api("/api/campaigns",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(campaignPayload())}); currentCampaignId = result.campaign.id; renderValidation(result.validation); await refresh(); showToast("Campaign saved and validated.");}
+  catch(err){showToast(err.message)}
+};
+document.getElementById("sendTest").onclick = async () => {
+  if(!currentCampaignId){showToast("Save campaign first.");return}
+  const test_email = document.getElementById("testEmail").value;
+  try{const result = await api(`/api/campaigns/${currentCampaignId}/send-test`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({test_email})}); await refresh(); showToast(`Test result: ${result.sent} sent, ${result.failed} failed.`); show("Logs");}
+  catch(err){showToast(err.message)}
+};
+document.getElementById("sendBulk").onclick = async () => {
+  if(!currentCampaignId){showToast("Save campaign first.");return}
+  if(!confirm("Send this campaign to all eligible recipients? Suppressed and unknown-consent contacts will be skipped.")){return}
+  try{const result = await api(`/api/campaigns/${currentCampaignId}/send`,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}); await refresh(); showToast(`Bulk send complete: ${result.sent} sent, ${result.failed} failed.`); show("Logs");}
+  catch(err){showToast(err.message)}
+};
+
+refresh().catch(err=>showToast(err.message));
+show("Dashboard");
+</script>
+</body>
+</html>

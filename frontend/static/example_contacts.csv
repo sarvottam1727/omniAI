@@ -1,0 +1,5 @@
+email,first_name,last_name,company,consent_status,tags
+client1@example.com,Client,One,Acme,opted_in,newsletter
+client2@example.com,Client,Two,Acme,soft_opt_in,newsletter
+unknownlead@example.com,Unknown,Lead,Atlas,unknown,lead
+unsubscribed@example.com,Former,Subscriber,Contoso,unsubscribed,old
