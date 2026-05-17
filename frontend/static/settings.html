@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .danger-zone{border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.06);border-radius:14px;padding:18px}
+    .danger-zone h2{color:#fecaca}
+    .danger-zone .sub{color:#fecaca}
+    .pair{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+    .pair:last-child{border-bottom:0}
+    .pair .k{color:var(--ink-mute)}
+    .pair .v{color:var(--ink);font-weight:600}
+    .pair .v code{background:rgba(0,0,0,.4);padding:2px 6px;border-radius:5px;color:#a7f3d0;font-size:12px}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>Settings</h1>
+    <p>System status, audit trail, and destructive actions. Everything here stays on your machine.</p>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>System status</h2>
+      <p class="sub">Live read-out from the local server.</p>
+      <div id="cryptoBlock" class="small"><div class="skel" style="width:80%"></div></div>
+      <div id="modeBlock" class="small" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2>AI mode</h2>
+      <p class="sub">When <code>ANTHROPIC_API_KEY</code> is set in env, chat is interpreted by Claude Opus 4.7 with tool calling + web_search.</p>
+      <div id="llmBlock" class="small"></div>
+      <pre class="mono" style="background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:10px;padding:14px;font-size:12px;color:#a7f3d0;margin-top:12px">$env:ANTHROPIC_API_KEY = "sk-ant-..."
+python run_ui.py</pre>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:18px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2>Audit log</h2>
+        <p class="sub">Every sender save, campaign launch, suppression change, and contact import is recorded. Secrets are redacted automatically.</p>
+      </div>
+      <button class="btn small ghost" id="refreshAudit">Refresh</button>
+    </div>
+    <div class="scrollbox" style="max-height:420px">
+      <table>
+        <thead><tr><th>Time</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+        <tbody id="auditRows"><tr><td colspan="4" class="small" style="text-align:center;padding:18px">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="danger-zone" style="margin-top:18px">
+    <h2>Danger zone</h2>
+    <p class="sub">These actions are immediate and cannot be undone.</p>
+    <div class="row-actions">
+      <button class="btn danger" id="clearContactsBtn">Clear all contacts</button>
+      <button class="btn danger" id="clearSuppressionBtn">Clear suppression list</button>
+      <button class="btn danger" id="resetStateBtn">Reset all state</button>
+    </div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/settings", title: "Settings", subtitle: "System status, audit, danger zone" });
+  await OmniAI.refresh();
+  loadCrypto();
+  loadLlm();
+  loadAudit();
+  document.getElementById("refreshAudit").addEventListener("click", loadAudit);
+  document.getElementById("clearContactsBtn").addEventListener("click", async ()=>{
+    if(!confirm("Remove ALL contacts? Cannot be undone.")) return;
+    await OmniAI.api("/api/chat", {method:"POST",headers:{"Content-Type":"application/json"}, body: JSON.stringify({session_id:"settings", message:"clear contacts"})});
+    OmniAI.toast("Contacts cleared.", "ok", "Done");
+  });
+  document.getElementById("clearSuppressionBtn").addEventListener("click", async ()=>{
+    if(!confirm("Clear the suppression list? Cannot be undone.")) return;
+    const s = await OmniAI.refresh();
+    for(const supp of (s.suppression || [])){
+      await OmniAI.api("/api/chat", {method:"POST",headers:{"Content-Type":"application/json"}, body: JSON.stringify({session_id:"settings", message:`unsuppress ${supp.email}`})});
+    }
+    OmniAI.toast("Suppression list cleared.", "ok", "Done");
+    await OmniAI.refresh();
+  });
+  document.getElementById("resetStateBtn").addEventListener("click", ()=>{
+    alert("To fully reset, stop the server and delete `local_data/state.json`. Then restart.");
+  });
+});
+
+async function loadCrypto(){
+  try{
+    const r = await OmniAI.api("/api/crypto-status");
+    document.getElementById("cryptoBlock").innerHTML = `
+      <div class="pair"><span class="k">Encryption SDK</span><span class="v">${r.encryption_sdk ? '<span class="pill ok">installed</span>' : '<span class="pill bad">missing</span>'}</span></div>
+      <div class="pair"><span class="k">Encryption enabled</span><span class="v">${r.encryption_enabled ? '<span class="pill ok">yes — Fernet</span>' : '<span class="pill warn">disabled</span>'}</span></div>
+      <div class="pair"><span class="k">Secrets file</span><span class="v"><code>${OmniAI.escapeHtml(r.secrets_file || "—")}</code></span></div>
+      <div class="pair"><span class="k">Stored credentials</span><span class="v">${r.stored_secrets ?? 0}</span></div>
+    `;
+  }catch(err){
+    document.getElementById("cryptoBlock").innerHTML = `<span class="pill bad">Error: ${OmniAI.escapeHtml(err.message)}</span>`;
+  }
+}
+
+async function loadLlm(){
+  try{
+    const r = await OmniAI.api("/api/chat-config");
+    const wrap = document.getElementById("llmBlock");
+    if(r.enabled){
+      wrap.innerHTML = `<div class="pair"><span class="k">Mode</span><span class="v"><span class="pill ok">AI · ${OmniAI.escapeHtml(r.model||"Claude")}</span></span></div>
+        <div class="pair"><span class="k">SDK installed</span><span class="v">${r.sdk_installed ? "yes" : "no"}</span></div>
+        <div class="pair"><span class="k">API key</span><span class="v">${r.api_key_set ? '<code>set in env</code>' : '<span class="pill warn">missing</span>'}</span></div>`;
+    } else {
+      wrap.innerHTML = `<div class="pair"><span class="k">Mode</span><span class="v"><span class="pill muted">Local (regex router)</span></span></div>
+        <div class="pair"><span class="k">SDK installed</span><span class="v">${r.sdk_installed ? "yes" : '<span class="pill bad">no — pip install anthropic</span>'}</span></div>
+        <div class="pair"><span class="k">API key</span><span class="v"><span class="pill warn">not set</span></span></div>
+        <div class="small" style="margin-top:8px;color:var(--ink-mute)">Set <code>ANTHROPIC_API_KEY</code> and restart the server to enable AI mode.</div>`;
+    }
+  }catch(err){
+    document.getElementById("llmBlock").innerHTML = `<span class="pill bad">Error: ${OmniAI.escapeHtml(err.message)}</span>`;
+  }
+}
+
+async function loadAudit(){
+  try{
+    const r = await OmniAI.api("/api/audit?limit=200");
+    const rows = (r.audit_log || []).map(e=>`
+      <tr>
+        <td class="small mono">${new Date(e.created_at).toLocaleString()}</td>
+        <td><span class="pill info">${OmniAI.escapeHtml(e.action)}</span></td>
+        <td class="small mono">${OmniAI.escapeHtml(e.entity_type||"—")}${e.entity_id?(" · "+OmniAI.escapeHtml(String(e.entity_id).slice(0,16))):""}</td>
+        <td class="small mono">${OmniAI.escapeHtml(JSON.stringify(e.details||{}))}</td>
+      </tr>
+    `).join("");
+    document.getElementById("auditRows").innerHTML = rows || `<tr><td colspan="4" class="small" style="text-align:center;padding:18px"><strong>No audit entries yet.</strong> Save a sender, launch a campaign, or import contacts to populate the log.</td></tr>`;
+  }catch(err){
+    document.getElementById("auditRows").innerHTML = `<tr><td colspan="4" class="small" style="text-align:center;padding:18px;color:#fda4af">Error: ${OmniAI.escapeHtml(err.message)}</td></tr>`;
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Live Sending</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .feed{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow:auto;padding:8px 0}
+    .feed .ev{display:flex;gap:10px;padding:8px 10px;border-radius:8px;font-size:12.5px;background:rgba(255,255,255,.02);border:1px solid var(--line)}
+    .feed .ev.ok{border-color:rgba(16,185,129,.25)}
+    .feed .ev.bad{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.05)}
+    .feed .ev .t{color:var(--ink-mute);min-width:80px}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+      <div><h1>Live Sending</h1><p>Real-time view of the most recent campaign and its per-recipient events.</p></div>
+      <span class="badge info" id="autoPill"><span class="ico"></span>auto-refresh every 2s</span>
+    </div>
+  </section>
+
+  <div id="empty" class="panel" style="display:none">
+    <h2>No campaign running</h2>
+    <p class="sub">Launch a campaign to see live progress here.</p>
+    <a class="btn primary" href="/quick-launch">⚡ Quick Launch</a>
+  </div>
+
+  <section class="panel" id="liveCard">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px">
+      <div>
+        <h2 id="cName">—</h2>
+        <p class="sub" id="cMeta">—</p>
+      </div>
+      <span class="pill info" id="cStatus">—</span>
+    </div>
+    <div class="progress" style="margin-top:10px"><span id="cProg" style="width:0%"></span></div>
+    <div class="stats" style="margin-top:14px">
+      <div class="stat info"><div class="label">Total</div><div class="val" id="cTotal">0</div></div>
+      <div class="stat ok"><div class="label">Sent</div><div class="val" id="cSent">0</div></div>
+      <div class="stat warn"><div class="label">Pending</div><div class="val" id="cPending">0</div></div>
+      <div class="stat bad"><div class="label">Failed</div><div class="val" id="cFailed">0</div></div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:18px">
+    <h2>Activity feed</h2>
+    <div class="feed" id="feed"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let TIMER = null;
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/live", title: "Live Sending", subtitle: "Real-time campaign progress" });
+  await tick();
+  TIMER = setInterval(tick, 2000);
+});
+
+async function tick(){
+  const s = await OmniAI.refresh();
+  const camps = s.campaigns || [];
+  const last = camps.slice().reverse().find(c => (c.recipients||[]).length > 0) || camps[camps.length-1];
+  if(!last){
+    document.getElementById("empty").style.display = "block";
+    document.getElementById("liveCard").style.display = "none";
+    return;
+  }
+  document.getElementById("empty").style.display = "none";
+  document.getElementById("liveCard").style.display = "";
+  const recip = last.recipients || [];
+  const sent = recip.filter(r => r.status === "sent").length;
+  const failed = recip.filter(r => r.status === "failed").length;
+  const pending = recip.filter(r => r.status === "queued").length;
+  const pct = recip.length ? Math.round((sent + failed)/recip.length * 100) : 0;
+  const sender = (s.senders||[]).find(x => x.id === last.sender_id) || {};
+  document.getElementById("cName").textContent = last.name;
+  document.getElementById("cMeta").innerHTML = `via <code>${OmniAI.escapeHtml(sender.sender_email||"—")}</code> · ${OmniAI.escapeHtml(last.campaign_type||"")} · ID <code>${last.id.slice(0,8)}…</code>`;
+  document.getElementById("cStatus").className = "pill " + (last.status === "sent" ? "ok" : (last.status||"").startsWith("paused") ? "warn" : "info");
+  document.getElementById("cStatus").textContent = last.status || "draft";
+  document.getElementById("cProg").style.width = pct + "%";
+  document.getElementById("cTotal").textContent = recip.length;
+  document.getElementById("cSent").textContent = sent;
+  document.getElementById("cPending").textContent = pending;
+  document.getElementById("cFailed").textContent = failed;
+
+  // Feed: pull events for this campaign
+  const events = (s.events || []).filter(e => e.campaign_id === last.id).slice().reverse().slice(0, 80);
+  document.getElementById("feed").innerHTML = events.map(e => {
+    const cls = e.event === "sent" ? "ok" : "bad";
+    return `<div class="ev ${cls}">
+      <span class="t mono">${new Date(e.created_at).toLocaleTimeString()}</span>
+      <span style="flex:1"><strong class="mono">${OmniAI.escapeHtml(e.email||"")}</strong> · ${OmniAI.escapeHtml(e.event)}${e.reason?' — '+OmniAI.escapeHtml(e.reason):''}</span>
+    </div>`;
+  }).join("") || `<div class="small" style="text-align:center;padding:20px">Waiting for events…</div>`;
+}
+</script>
+</body>
+</html>

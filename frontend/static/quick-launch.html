@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Quick Launch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+    .step{padding:12px 14px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:13px;display:flex;gap:10px;align-items:center}
+    .step.active{background:linear-gradient(180deg,rgba(34,211,238,.12),rgba(167,139,250,.06));border-color:transparent;color:#fff;position:relative}
+    .step.active::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+    .step .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.06);font-weight:800;font-size:12px;color:var(--ink-mute)}
+    .step.active .n{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04122a}
+    @media(max-width:780px){.stepper{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>⚡ Quick Launch</h1>
+    <p>Configure Gmail, paste recipients, write your message, and send — all in one go. The same flow you've been using on the chat page, now in a guided form.</p>
+  </section>
+
+  <div class="stepper">
+    <div class="step active"><div class="n">1</div><div>Sender</div></div>
+    <div class="step active"><div class="n">2</div><div>Recipients</div></div>
+    <div class="step active"><div class="n">3</div><div>Message</div></div>
+    <div class="step active"><div class="n">4</div><div>Launch</div></div>
+  </div>
+
+  <section class="panel">
+    <h2>1 · Sender</h2>
+    <p class="sub">Pick a saved sender, or add a new Gmail account. Saved senders use the encrypted password already on disk — no re-typing.</p>
+    <label>Use saved sender
+      <select id="qs_existing_sender" style="margin-bottom:8px">
+        <option value="">— Configure a new Gmail account below —</option>
+      </select>
+    </label>
+    <div id="qs_new_sender_block">
+      <div class="ins" style="margin-bottom:10px">
+        <strong>New Gmail</strong> — use a <strong>16-character App Password</strong> from
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>. 2-Step Verification must be on.
+      </div>
+      <div class="three">
+        <label>Gmail address<input id="qs_gmail" type="email" placeholder="you@gmail.com" autocomplete="username"></label>
+        <label>Sender name<input id="qs_sender" placeholder="Your Name"></label>
+        <label>App password<input id="qs_password" type="password" placeholder="abcd efgh ijkl mnop" autocomplete="new-password"></label>
+      </div>
+    </div>
+    <div id="qs_picked_sender_block" style="display:none">
+      <div class="ins good">
+        <strong>✓ Using saved sender</strong>
+        <div class="small" id="qs_picked_sender_info" style="color:#fff;margin-top:4px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:14px">
+    <h2>2 · Recipients</h2>
+    <p class="sub">Paste any list, comma or newline separated. Or upload a CSV — we extract emails by regex.</p>
+    <div class="row-actions" style="margin-bottom:8px">
+      <button class="btn small secondary" id="qs_csv_btn">Upload CSV/XLSX</button>
+      <input id="qs_csv" type="file" accept=".csv,.txt,.xlsx" style="display:none">
+      <span class="small" id="qs_count">0 emails detected</span>
+    </div>
+    <label>Recipients
+      <textarea id="qs_recipients" rows="3" placeholder="alice@example.com, bob@example.com&#10;carol@example.com"></textarea>
+    </label>
+  </section>
+
+  <section class="panel" style="margin-top:14px">
+    <h2>3 · Compose</h2>
+    <p class="sub">Variables: <code>{{first_name}}</code> <code>{{sender_name}}</code> <code>{{unsubscribe_url}}</code> <code>{{physical_address}}</code></p>
+    <label>Subject<input id="qs_subject" placeholder="(optional — auto-derived from the body's first line)"></label>
+    <label>Email body
+      <textarea id="qs_body" rows="6" placeholder="Hi {{first_name}},&#10;&#10;Quick note from us.&#10;&#10;Thanks!"></textarea>
+    </label>
+  </section>
+
+  <section class="panel" style="margin-top:14px">
+    <h2>4 · Launch</h2>
+    <p class="sub">Compliance gates run automatically. Suppressed / bounced / unsubscribed recipients are excluded. A footer with unsubscribe link + physical address is appended if missing.</p>
+    <div class="row-actions">
+      <button class="btn primary large" id="qs_send">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Configure &amp; send to all
+      </button>
+    </div>
+    <div id="qs_result" style="display:none;margin-top:10px;padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.5;border:1px solid var(--line)"></div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+function extractEmails(text){ return (text.match(/[A-Za-z0-9._+\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9.\-]+/g) || []) }
+
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/quick-launch", title: "Quick Launch", subtitle: "Send a campaign in 4 steps" });
+  const ta = document.getElementById("qs_recipients");
+  const cnt = document.getElementById("qs_count");
+  const updateCount = ()=>{
+    const list = Array.from(new Set(extractEmails(ta.value).map(e => e.toLowerCase())));
+    cnt.textContent = list.length + (list.length === 1 ? " email" : " emails");
+  };
+  ta.addEventListener("input", updateCount);
+  updateCount();
+
+  // ---- Sender dropdown ----
+  const sel = document.getElementById("qs_existing_sender");
+  const newBlock = document.getElementById("qs_new_sender_block");
+  const pickedBlock = document.getElementById("qs_picked_sender_block");
+  const pickedInfo = document.getElementById("qs_picked_sender_info");
+
+  async function loadSenders(){
+    const s = await OmniAI.refresh();
+    const senders = s.senders || [];
+    // Keep the "configure new" option, append every saved sender
+    sel.innerHTML = `<option value="">— Configure a new Gmail account below —</option>` +
+      senders.map(x => {
+        const label = `${x.label || x.sender_email}`;
+        const tag = x.provider === "dryrun" ? " · dry-run" : x.provider === "mailpit" ? " · local" : (x.password_configured ? "" : " · needs password");
+        return `<option value="${x.id}" data-ready="${x.password_configured || x.provider === 'dryrun' || x.provider === 'mailpit'}">${OmniAI.escapeHtml(label)}${tag}</option>`;
+      }).join("");
+    // Default to the first usable real-provider sender
+    const preferred = senders.find(x => x.password_configured) || senders.find(x => x.provider === "dryrun");
+    if(preferred) sel.value = preferred.id;
+    onSenderChange();
+  }
+
+  function onSenderChange(){
+    const id = sel.value;
+    if(!id){
+      newBlock.style.display = "";
+      pickedBlock.style.display = "none";
+      return;
+    }
+    const sender = (OmniAI.getState().senders || []).find(x => x.id === id);
+    if(!sender) return;
+    newBlock.style.display = "none";
+    pickedBlock.style.display = "";
+    const status = sender.provider === "dryrun" ? '<span class="pill info">dry-run · no real email delivered</span>'
+                : sender.provider === "mailpit" ? '<span class="pill info">local mailpit</span>'
+                : sender.password_configured ? '<span class="pill ok">app password saved · encrypted at rest</span>'
+                : '<span class="pill warn">password missing — re-save on /providers</span>';
+    pickedInfo.innerHTML = `
+      <div><strong>${OmniAI.escapeHtml(sender.label || sender.sender_email)}</strong></div>
+      <div class="small mono" style="color:#a7f3d0;margin:2px 0">${OmniAI.escapeHtml(sender.sender_email)}</div>
+      <div style="margin-top:6px">${status}</div>
+      <div class="small" style="color:#a7f3d0;margin-top:4px">Physical address: ${OmniAI.escapeHtml(sender.physical_address || "(missing — please update on /providers)")}</div>
+    `;
+  }
+
+  sel.addEventListener("change", onSenderChange);
+  await loadSenders();
+
+  const csvBtn = document.getElementById("qs_csv_btn");
+  const csv = document.getElementById("qs_csv");
+  csvBtn.addEventListener("click", ()=> csv.click());
+  csv.addEventListener("change", async e => {
+    const f = e.target.files[0]; if(!f) return;
+    if((f.name||"").toLowerCase().endsWith(".xlsx")){
+      // server parse
+      const form = new FormData(); form.append("file", f);
+      try{ const r = await OmniAI.api("/api/import", {method:"POST", body: form});
+           OmniAI.toast(`Parsed XLSX: ${r.imported + r.updated} emails.`, "ok"); }
+      catch(err){ OmniAI.toast(err.message, "bad"); return }
+      const s = await OmniAI.refresh();
+      const emails = (s.contacts||[]).map(c => c.email);
+      const have = new Set(extractEmails(ta.value).map(e => e.toLowerCase()));
+      const merged = [...extractEmails(ta.value)];
+      for(const em of emails){ if(!have.has(em.toLowerCase())){ have.add(em.toLowerCase()); merged.push(em) } }
+      ta.value = merged.join("\n"); updateCount();
+    } else {
+      const text = await f.text();
+      const found = extractEmails(text);
+      if(!found.length){ OmniAI.toast("No emails found in that file.", "bad"); return }
+      const have = new Set(extractEmails(ta.value).map(e => e.toLowerCase()));
+      const merged = [...extractEmails(ta.value)];
+      for(const em of found){ if(!have.has(em.toLowerCase())){ have.add(em.toLowerCase()); merged.push(em) } }
+      ta.value = merged.join("\n"); updateCount();
+      OmniAI.toast(`Loaded ${found.length} email(s) from ${f.name}.`, "ok");
+    }
+    e.target.value = "";
+  });
+
+  document.getElementById("qs_send").addEventListener("click", launch);
+});
+
+async function launch(){
+  const btn = document.getElementById("qs_send");
+  const out = document.getElementById("qs_result");
+  const pickedId = document.getElementById("qs_existing_sender").value;
+  const payload = {
+    recipients: document.getElementById("qs_recipients").value,
+    subject: document.getElementById("qs_subject").value.trim(),
+    body: document.getElementById("qs_body").value,
+    session_id: "quick-launch-page",
+  };
+  if(pickedId){
+    payload.sender_id = pickedId;
+  } else {
+    payload.gmail_email = document.getElementById("qs_gmail").value.trim();
+    payload.app_password = document.getElementById("qs_password").value;
+    payload.sender_name = document.getElementById("qs_sender").value.trim();
+    if(!payload.gmail_email || !payload.app_password){
+      out.style.display = "block"; out.style.background = "rgba(239,68,68,.08)"; out.style.borderColor = "rgba(239,68,68,.3)"; out.style.color = "#fecaca";
+      out.innerHTML = "Pick a saved sender, or enter a new Gmail address + app password.";
+      return;
+    }
+  }
+  if(!payload.body.trim()){
+    out.style.display = "block"; out.style.background = "rgba(239,68,68,.08)"; out.style.borderColor = "rgba(239,68,68,.3)"; out.style.color = "#fecaca";
+    out.innerHTML = "Email body is required.";
+    return;
+  }
+  btn.disabled = true;
+  out.style.display = "block"; out.style.background = "rgba(34,211,238,.08)"; out.style.borderColor = "rgba(34,211,238,.3)"; out.style.color = "#bae6fd";
+  out.innerHTML = "Verifying Gmail SMTP and queuing the send…";
+  try{
+    const r = await fetch("/api/quick-send", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
+    const data = await r.json();
+    if(!r.ok || data.ok === false){
+      out.style.background = "rgba(239,68,68,.08)"; out.style.borderColor = "rgba(239,68,68,.3)"; out.style.color = "#fecaca";
+      out.innerHTML = `<strong>✕ ${data.stage==='gmail'?'Gmail verify failed':'Send failed'}</strong><br>${OmniAI.escapeHtml(data.message || JSON.stringify(data))}`;
+      OmniAI.toast(data.message || "Quick send failed", "bad", "Failed");
+      return;
+    }
+    out.style.background = "rgba(16,185,129,.08)"; out.style.borderColor = "rgba(16,185,129,.3)"; out.style.color = "#a7f3d0";
+    const fromLabel = pickedId
+      ? ((OmniAI.getState().senders || []).find(x => x.id === pickedId) || {}).sender_email || pickedId
+      : payload.gmail_email;
+    out.innerHTML = `<strong>✓ Queued</strong><br>From <code>${OmniAI.escapeHtml(fromLabel)}</code> to <strong>${(data.recipients||[]).length}</strong> recipient(s). Open <a href="/live" style="color:inherit;border-bottom:1px dotted">Live Sending</a> to watch progress.`;
+    OmniAI.toast(`Queued to ${(data.recipients||[]).length} recipient(s).`, "ok", "Sending");
+    document.getElementById("qs_password").value = "";
+  }catch(err){
+    out.style.background = "rgba(239,68,68,.08)"; out.style.borderColor = "rgba(239,68,68,.3)"; out.style.color = "#fecaca";
+    out.innerHTML = "Network error: " + OmniAI.escapeHtml(err.message || String(err));
+  }finally{
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

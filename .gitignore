@@ -1,0 +1,48 @@
+# ---- Secrets & credentials (NEVER commit) ----
+local_data/
+*.key
+.secret.key
+.secret_key
+secrets.bin
+secrets.enc
+.env
+.env.*
+!.env.example
+
+# ---- Runtime state ----
+ui-server.log
+ui-server.err.log
+frontend/static/ui-server.log
+frontend/static/ui-server.err.log
+nohup.out
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Node / frontend build artifacts ----
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+package-lock.json
+yarn.lock
+.next/
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Test artifacts ----
+*.tmp
+.tmp/

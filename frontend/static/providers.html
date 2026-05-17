@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Email Providers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .prov-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px}
+    .prov-cards .pcard{cursor:pointer;padding:18px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid var(--line);transition:.2s;text-align:left;position:relative;overflow:hidden}
+    .prov-cards .pcard:hover{background:rgba(255,255,255,.05);border-color:var(--line-strong);transform:translateY(-2px)}
+    .prov-cards .pcard.active{background:linear-gradient(180deg,rgba(34,211,238,.12),rgba(167,139,250,.06));border-color:transparent}
+    .prov-cards .pcard.active::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+    .prov-cards .pico{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin-bottom:10px}
+    .prov-cards .pcard.active .pico{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04122a}
+    .helper-box{background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.25);color:#bae6fd;padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.6}
+    .helper-box ol{margin:6px 0 0 18px;padding:0}
+    .helper-box li{margin:3px 0}
+    .helper-box a{color:#fff;border-bottom:1px dotted}
+    .conn-result{margin-top:10px;padding:14px 16px;border-radius:11px;border:1px solid var(--line);font-size:13px;line-height:1.6;display:none}
+    .conn-result.ok{display:block;background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3);color:#a7f3d0}
+    .conn-result.bad{display:block;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#fecaca}
+    .conn-row{display:flex;gap:10px;align-items:center;margin:4px 0}
+    .conn-row .icon{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto}
+    .conn-row .icon.ok{background:rgba(16,185,129,.2);color:#10b981}
+    .conn-row .icon.bad{background:rgba(239,68,68,.2);color:#ef4444}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>Email Providers</h1>
+    <p>Connect Gmail or a custom SMTP. Credentials are <strong>encrypted at rest</strong> with Fernet and never logged. Always test the connection before launching a campaign.</p>
+  </section>
+
+  <h3 class="section-title">Pick a provider</h3>
+  <div class="prov-cards" id="provCards">
+    <button class="pcard active" data-prov="gmail">
+      <div class="pico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+      <div class="ptitle">Gmail SMTP</div>
+      <div class="pdesc">2-Step Verification + App Password</div>
+    </button>
+    <button class="pcard" data-prov="smtp">
+      <div class="pico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+      <div class="ptitle">Custom SMTP</div>
+      <div class="pdesc">Any provider with SMTP host + port</div>
+    </button>
+    <button class="pcard" data-prov="dryrun">
+      <div class="pico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 0 0 6.001 0M6 7l3 9M6 7l6-2"/></svg></div>
+      <div class="ptitle">Dry Run</div>
+      <div class="pdesc">Test the pipeline without sending real email</div>
+    </button>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2 id="formTitle">Gmail configuration</h2>
+      <p class="sub" id="formSub">For Gmail: turn on 2-Step Verification, generate a 16-character App Password, and paste it below.</p>
+      <div class="three">
+        <label>Provider<select id="provider"><option value="gmail">Gmail SMTP</option><option value="smtp">Custom SMTP</option><option value="dryrun">Dry Run</option></select></label>
+        <label>Label / sender ID<input id="label" value="My Gmail"></label>
+        <label>From email<input id="sender_email" placeholder="you@gmail.com"></label>
+        <label>Sender name<input id="sender_name" placeholder="Your Name"></label>
+        <label>Reply-To<input id="reply_to" placeholder="reply@yourdomain.com"></label>
+        <label>Physical address (compliance)<input id="physical_address" placeholder="123 Compliance Street, City"></label>
+        <label>SMTP host<input id="host" value="smtp.gmail.com"></label>
+        <label>SMTP port<input id="port" type="number" value="587"></label>
+        <label>Encryption<select id="encryption"><option value="starttls">STARTTLS</option><option value="ssl">SSL</option><option value="none">None</option></select></label>
+        <label>SMTP username<input id="username" placeholder="usually same as From email"></label>
+        <label>App password / SMTP password<input id="password" type="password" placeholder="paste the 16-char app password" autocomplete="new-password"></label>
+        <label>Daily limit<input id="daily_limit" type="number" value="500"></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn primary" id="saveBtn">Save sender</button>
+        <button class="btn secondary" id="testBtn">Save &amp; test connection</button>
+      </div>
+      <div class="conn-result" id="connResult"></div>
+    </section>
+
+    <aside style="display:flex;flex-direction:column;gap:14px">
+      <div class="helper-box" id="helperGmail">
+        <b style="color:#fff">Gmail prerequisites</b>
+        <ol>
+          <li>Enable <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">2-Step Verification</a>.</li>
+          <li>Generate an <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a> (16 characters).</li>
+          <li>Paste it as <b>App password</b>. Your normal Gmail password will be rejected.</li>
+          <li>Daily caps: ~500/day for personal Gmail, ~2,000/day for Workspace.</li>
+        </ol>
+      </div>
+      <div class="helper-box" id="helperSmtp" style="display:none;background:rgba(167,139,250,.06);border-color:rgba(167,139,250,.25);color:#ddd6fe">
+        <b style="color:#fff">Custom SMTP</b>
+        <p style="margin:4px 0 0">Use your provider's documented host/port. Common combos: <code>587 + STARTTLS</code> or <code>465 + SSL</code>.</p>
+      </div>
+      <div class="helper-box" id="helperDryrun" style="display:none;background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.3);color:#a7f3d0">
+        <b style="color:#fff">Dry run</b>
+        <p style="margin:4px 0 0">The pipeline runs end-to-end but no real email is delivered. Perfect for testing flows safely.</p>
+      </div>
+    </aside>
+  </div>
+
+  <h3 class="section-title" style="margin-top:18px">Saved senders</h3>
+  <div class="panel" style="padding:0;overflow:hidden">
+    <div class="scrollbox" style="max-height:none;border:0">
+      <table>
+        <thead><tr><th>Label</th><th>Provider</th><th>From</th><th>Host</th><th>Daily</th><th>Status</th><th></th></tr></thead>
+        <tbody id="senderRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+const VARS = ["provider","label","sender_email","sender_name","reply_to","physical_address","host","port","encryption","username","password","daily_limit"];
+
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/providers", title: "Email Providers", subtitle: "Connect a sender, then test it" });
+  const s = await OmniAI.refresh();
+  renderSenders(s);
+  document.querySelectorAll(".pcard").forEach(b => b.addEventListener("click", ()=>{
+    document.querySelectorAll(".pcard").forEach(x => x.classList.toggle("active", x === b));
+    document.getElementById("provider").value = b.dataset.prov;
+    applyDefaults(b.dataset.prov);
+  }));
+  applyDefaults("gmail");
+  document.getElementById("saveBtn").addEventListener("click", ()=> save(false));
+  document.getElementById("testBtn").addEventListener("click", ()=> save(true));
+});
+
+function applyDefaults(p){
+  const set = (id, v) => { document.getElementById(id).value = v };
+  document.getElementById("formTitle").textContent = p==="gmail"?"Gmail configuration": p==="smtp"?"Custom SMTP configuration":"Dry-run configuration";
+  document.getElementById("formSub").textContent = p==="gmail"?"Turn on 2-Step Verification, generate a 16-char App Password, paste it below."
+                                                  : p==="smtp"?"Use the host/port/encryption documented by your SMTP provider."
+                                                  : "No real email is sent — useful for testing the campaign flow.";
+  document.getElementById("helperGmail").style.display = p==="gmail"?"block":"none";
+  document.getElementById("helperSmtp").style.display = p==="smtp"?"block":"none";
+  document.getElementById("helperDryrun").style.display = p==="dryrun"?"block":"none";
+  if(p==="gmail"){ set("host","smtp.gmail.com"); set("port","587"); set("encryption","starttls"); if(!document.getElementById("label").value.toLowerCase().includes("gmail")) set("label","My Gmail"); }
+  if(p==="smtp"){ if(["smtp.gmail.com","dryrun.local"].includes(document.getElementById("host").value)) set("host",""); if(document.getElementById("port").value==="0") set("port","587"); set("label","Custom SMTP"); }
+  if(p==="dryrun"){ set("host","dryrun.local"); set("port","0"); set("encryption","none"); set("label","Safe Dry Run"); set("sender_email","dryrun@omniai.local"); }
+}
+
+async function save(testAfter){
+  const payload = {};
+  VARS.forEach(id => payload[id] = document.getElementById(id).value);
+  if(payload.provider==="gmail" && !payload.username) payload.username = payload.sender_email;
+  const cr = document.getElementById("connResult");
+  cr.className = "conn-result"; cr.style.display="none";
+  try{
+    const result = await OmniAI.api("/api/senders", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
+    OmniAI.toast(`Saved sender "${result.sender.label}".`, "ok", "Saved");
+    if(testAfter){
+      const r = await fetch("/api/senders/test", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({sender_id: result.sender.id})});
+      const d = await r.json();
+      renderConnResult(r.ok, d.message || "");
+      OmniAI.toast(d.message || "Test complete", r.ok?"ok":"bad", r.ok?"Connection OK":"Test failed");
+    }
+    const s = await OmniAI.refresh();
+    renderSenders(s);
+  }catch(err){
+    cr.className = "conn-result bad"; cr.style.display = "block";
+    cr.innerHTML = `<strong>✕ Save failed.</strong><br>${OmniAI.escapeHtml(err.message)}`;
+    OmniAI.toast(err.message, "bad", "Save failed");
+  }
+}
+
+function renderConnResult(ok, msg){
+  const cr = document.getElementById("connResult");
+  cr.className = "conn-result " + (ok?"ok":"bad");
+  cr.style.display = "block";
+  if(ok){
+    cr.innerHTML = `<strong style="color:#fff">✓ Connection verified</strong>
+      <div class="conn-row"><span class="icon ok">✓</span><span>Host reachable</span></div>
+      <div class="conn-row"><span class="icon ok">✓</span><span>Authenticated</span></div>
+      <div class="conn-row"><span class="icon ok">✓</span><span>TLS / STARTTLS active</span></div>
+      <div class="conn-row"><span class="icon ok">✓</span><span>Sender verified</span></div>
+      <div class="small" style="margin-top:6px;color:#fff">${OmniAI.escapeHtml(msg)}</div>`;
+  } else {
+    let suggestion = "Double-check host, port, encryption, and credentials.";
+    if(/auth/i.test(msg)) suggestion = "Authentication failed. For Gmail, use a 16-character App Password (not your regular password).";
+    else if(/refus|unreach|timeout/i.test(msg)) suggestion = "Network couldn't reach the SMTP host. Check port/firewall and try again.";
+    else if(/tls|ssl/i.test(msg)) suggestion = "Encryption mismatch. Try STARTTLS on port 587 or SSL on port 465.";
+    cr.innerHTML = `<strong style="color:#fff">✕ Connection failed</strong>
+      <div style="margin-top:6px"><strong>Why:</strong> ${OmniAI.escapeHtml(msg)}</div>
+      <div><strong>Fix:</strong> ${OmniAI.escapeHtml(suggestion)}</div>`;
+  }
+}
+
+function renderSenders(s){
+  const rows = (s.senders||[]).map(x=>{
+    const status = x.password_configured ? '<span class="pill ok">verified</span>'
+                 : x.provider==="dryrun" ? '<span class="pill info">dry-run</span>'
+                 : x.provider==="mailpit" ? '<span class="pill info">local</span>'
+                 : '<span class="pill warn">no password</span>';
+    return `<tr>
+      <td><strong>${OmniAI.escapeHtml(x.label)}</strong></td>
+      <td><span class="pill muted">${OmniAI.escapeHtml(x.provider)}</span></td>
+      <td class="mono small">${OmniAI.escapeHtml(x.sender_email)}</td>
+      <td class="mono small">${OmniAI.escapeHtml(x.host||"")}:${x.port||""}</td>
+      <td>${x.daily_limit||500}</td>
+      <td>${status}</td>
+      <td style="text-align:right"><button class="btn small ghost" data-test="${x.id}">Test</button></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("senderRows").innerHTML = rows || `<tr><td colspan="7" class="small" style="text-align:center;padding:20px"><strong>No senders yet.</strong> Configure one above to get started.</td></tr>`;
+  document.querySelectorAll("[data-test]").forEach(b => b.addEventListener("click", async ()=>{
+    try{
+      const r = await fetch("/api/senders/test", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({sender_id: b.dataset.test})});
+      const d = await r.json();
+      OmniAI.toast(d.message || (r.ok?"OK":"Failed"), r.ok?"ok":"bad", r.ok?"Connection OK":"Test failed");
+    }catch(err){ OmniAI.toast(err.message, "bad") }
+  }));
+}
+</script>
+</body>
+</html>

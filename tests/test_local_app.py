@@ -59,6 +59,20 @@ def wait_for_server():
     raise RuntimeError("Server did not start")
 
 
+def wait_for_campaign_complete(campaign_id: str):
+    for _ in range(80):
+        status, state = request("/api/state")
+        assert status == 200
+        campaign = next((item for item in state["campaigns"] if item["id"] == campaign_id), None)
+        assert campaign is not None
+        recipients = campaign.get("recipients", [])
+        queued = sum(1 for item in recipients if item.get("status") == "queued")
+        if campaign.get("status") in {"sent", "completed_with_failures"} and queued == 0:
+            return campaign
+        time.sleep(0.25)
+    raise AssertionError("Campaign did not finish sending")
+
+
 def main():
     if DATA.exists():
         shutil.rmtree(DATA)
@@ -73,6 +87,15 @@ def main():
 
         status, result = request("/api/senders/test", "POST", {"sender_id": "local-dryrun"})
         assert status == 200 and result["ok"] is True
+
+        status, general = request("/api/chat", "POST", {"session_id": "local-test", "message": "Why can't you answer normal English questions?"})
+        assert status == 200
+        assert "I didn't recognize" not in general["reply"]
+        assert "normal English" in general["reply"]
+
+        status, math = request("/api/chat", "POST", {"session_id": "local-test", "message": "what is 2 + 2?"})
+        assert status == 200
+        assert "4" in math["reply"]
 
         status, upload = multipart_upload(
             "/api/import",
@@ -112,7 +135,9 @@ def main():
 
         status, send_result = request(f"/api/campaigns/{campaign_id}/send", "POST", {})
         assert status == 200
-        assert send_result["sent"] >= 1
+        assert send_result["ok"] is True
+        campaign = wait_for_campaign_complete(campaign_id)
+        assert sum(1 for item in campaign["recipients"] if item["status"] == "sent") >= 1
 
         bad_payload = dict(campaign_payload)
         bad_payload["html_body"] = "<p>Plain marketing body without the required opt-out link.</p>"

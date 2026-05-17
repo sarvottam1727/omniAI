@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Campaigns</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+      <div><h1>Campaigns</h1><p>Every campaign you have saved, drafted, queued, or sent.</p></div>
+      <div class="strip">
+        <a class="btn primary" href="/quick-launch">⚡ Quick Launch</a>
+        <a class="btn secondary" href="/chat">Compose in chat</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="filter-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <input id="searchInput" placeholder="Search campaign name..." style="height:36px;min-height:36px;flex:1;min-width:240px">
+    <select id="statusFilter" style="height:36px;min-height:36px">
+      <option value="">All statuses</option>
+      <option value="draft">draft</option>
+      <option value="queued">queued</option>
+      <option value="sent">sent</option>
+      <option value="completed_with_failures">with failures</option>
+    </select>
+  </div>
+
+  <section class="panel" style="padding:0;overflow:hidden">
+    <div class="scrollbox" style="max-height:none;border:0">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Sender</th><th>Recipients</th><th>Sent / Failed</th><th>Status</th><th>Created</th></tr></thead>
+        <tbody id="campRows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let ALL = [], SENDERS = [];
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/campaigns", title: "Campaigns", subtitle: "All saved campaigns" });
+  const s = await OmniAI.refresh();
+  ALL = s.campaigns || []; SENDERS = s.senders || [];
+  render();
+  document.getElementById("searchInput").addEventListener("input", render);
+  document.getElementById("statusFilter").addEventListener("change", render);
+});
+function render(){
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const sf = document.getElementById("statusFilter").value;
+  const rows = ALL.slice().reverse().filter(c =>
+    (!sf || c.status === sf) && (!q || (c.name||"").toLowerCase().includes(q))
+  );
+  const senderEmail = id => (SENDERS.find(x => x.id === id) || {}).sender_email || "—";
+  document.getElementById("campRows").innerHTML = rows.map(c=>{
+    const recip = c.recipients || [];
+    const sent = recip.filter(r => r.status === "sent").length;
+    const failed = recip.filter(r => r.status === "failed").length;
+    const cls = c.status === "sent" ? "ok" : (c.status === "completed_with_failures" || (c.status||"").startsWith("paused")) ? "warn" : "info";
+    return `<tr>
+      <td><strong>${OmniAI.escapeHtml(c.name)}</strong></td>
+      <td><span class="pill muted">${OmniAI.escapeHtml(c.campaign_type)}</span></td>
+      <td class="mono small">${OmniAI.escapeHtml(senderEmail(c.sender_id))}</td>
+      <td>${recip.length}</td>
+      <td>${sent} / ${failed}</td>
+      <td><span class="pill ${cls}">${OmniAI.escapeHtml(c.status || "draft")}</span></td>
+      <td class="small mono">${c.created_at ? new Date(c.created_at).toLocaleString() : "—"}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" class="small" style="text-align:center;padding:24px"><strong>No campaigns match.</strong> Start one via <a href="/quick-launch">Quick Launch</a>.</td></tr>`;
+}
+</script>
+</body>
+</html>

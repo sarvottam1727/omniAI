@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Suppression List</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>Suppression List</h1>
+    <p>Addresses that <strong>never</strong> receive a campaign. Unsubscribes are added automatically. You can also block addresses manually.</p>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Suppress an address</h2>
+      <div class="grid">
+        <label>Email<input id="suppEmail" placeholder="bounced@example.com"></label>
+        <label>Reason<input id="suppReason" placeholder="bounced / complained / manual" value="manual"></label>
+      </div>
+      <div class="row-actions"><button class="btn primary" id="addBtn">Add to suppression</button></div>
+    </section>
+    <section class="panel">
+      <h2>Why use this?</h2>
+      <p class="sub" style="margin:0">Email service providers track sender reputation by complaints and bounces. Suppressing problem addresses protects your sender domain and Gmail account from rate-limiting or blocking.</p>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:18px">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">Suppressed addresses <span class="small" id="totalCount">0</span></h2>
+    <div class="scrollbox" style="max-height:560px">
+      <table>
+        <thead><tr><th>Email</th><th>Reason</th><th>Source</th><th>Added</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/suppression", title: "Suppression List", subtitle: "Block-list for compliance" });
+  await load();
+  document.getElementById("addBtn").addEventListener("click", add);
+});
+
+async function load(){
+  const s = await OmniAI.refresh();
+  const list = s.suppression || [];
+  document.getElementById("totalCount").textContent = `${list.length} address${list.length===1?"":"es"}`;
+  document.getElementById("rows").innerHTML = list.map(x => `<tr>
+    <td class="mono">${OmniAI.escapeHtml(x.email)}</td>
+    <td><span class="pill bad">${OmniAI.escapeHtml(x.reason)}</span></td>
+    <td>${OmniAI.escapeHtml(x.source)}</td>
+    <td class="small mono">${new Date(x.created_at).toLocaleString()}</td>
+    <td style="text-align:right"><button class="btn small ghost" data-rm="${OmniAI.escapeHtml(x.email)}">Remove</button></td>
+  </tr>`).join("") || `<tr><td colspan="5" class="small" style="text-align:center;padding:20px"><strong>Suppression list is empty.</strong></td></tr>`;
+  document.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", async ()=>{
+    if(!confirm(`Remove ${b.dataset.rm} from suppression?`)) return;
+    await OmniAI.api("/api/chat", {method:"POST",headers:{"Content-Type":"application/json"}, body: JSON.stringify({session_id:"supp-page", message:`unsuppress ${b.dataset.rm}`})});
+    OmniAI.toast(`Removed ${b.dataset.rm}.`, "ok");
+    await load();
+  }));
+}
+
+async function add(){
+  const email = document.getElementById("suppEmail").value.trim();
+  const reason = document.getElementById("suppReason").value.trim() || "manual";
+  if(!email){ OmniAI.toast("Enter an email.", "info"); return }
+  await OmniAI.api("/api/chat", {method:"POST",headers:{"Content-Type":"application/json"}, body: JSON.stringify({session_id:"supp-page", message:`suppress ${email} reason ${reason}`})});
+  OmniAI.toast(`Suppressed ${email}.`, "ok", "Done");
+  document.getElementById("suppEmail").value = "";
+  await load();
+}
+</script>
+</body>
+</html>

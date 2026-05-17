@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Contacts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .filter-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+    .filter-row input,.filter-row select{height:36px;min-height:36px;padding:6px 12px}
+    .filter-row input{flex:1;min-width:200px}
+    .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:14px}
+    .summary .pill-stat{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
+    .summary .pill-stat .l{font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+    .summary .pill-stat .v{font-size:22px;font-weight:800;margin-top:4px}
+    .summary .pill-stat.ok{background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.3)}.summary .pill-stat.ok .v{color:#86efac}
+    .summary .pill-stat.bad{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.3)}.summary .pill-stat.bad .v{color:#fda4af}
+    .summary .pill-stat.warn{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.3)}.summary .pill-stat.warn .v{color:#fcd34d}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>Contacts</h1>
+    <p>Upload recipients via CSV/XLSX, paste a list, or add a single contact. We validate every row and let you download anything rejected.</p>
+  </section>
+
+  <div class="grid" style="margin-bottom:18px">
+    <section class="panel">
+      <h2>Upload a file</h2>
+      <p class="sub">Required column: <code>email</code>. Optional: <code>first_name</code>, <code>last_name</code>, <code>company</code>, <code>consent_status</code>, <code>tags</code>.</p>
+      <div class="dropzone" id="dropZone">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <strong>Drop CSV / XLSX here</strong>
+        <span>or <span class="browse">browse files</span></span>
+        <input id="fileInput" type="file" accept=".csv,.xlsx" style="display:none">
+      </div>
+      <div class="row-actions">
+        <a class="btn small secondary" href="/example_contacts.csv" download>Download sample CSV</a>
+        <span class="small" id="uploadHint">Files are parsed on the server. Invalid rows are downloadable.</span>
+      </div>
+      <div class="summary" id="summary" style="display:none"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Paste emails or add one</h2>
+      <p class="sub">Paste any text — we extract every valid address. Or add a single contact manually.</p>
+      <label>Paste emails (comma / newline separated)
+        <textarea id="pasteBox" rows="6" placeholder="alice@example.com, bob@example.com&#10;carol@example.com"></textarea>
+      </label>
+      <div class="row-actions" style="margin-bottom:10px">
+        <button class="btn primary" id="pasteAddBtn">Add pasted emails</button>
+        <span class="small" id="pasteHint">0 emails detected</span>
+      </div>
+      <div class="grid">
+        <label>Single contact email<input id="singleEmail" placeholder="dan@example.com"></label>
+        <label>First name (optional)<input id="singleFirst" placeholder="Dan"></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn secondary" id="singleAddBtn">Add single contact</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">Recipients <span class="small" id="totalCount">0 contacts</span></h2>
+    <div class="filter-row">
+      <input id="searchInput" placeholder="Search email, name, or company..." />
+      <select id="consentFilter">
+        <option value="">All consents</option>
+        <option value="opted_in">opted_in</option>
+        <option value="soft_opt_in">soft_opt_in</option>
+        <option value="transactional">transactional</option>
+        <option value="unknown">unknown</option>
+        <option value="unsubscribed">unsubscribed</option>
+        <option value="bounced">bounced</option>
+        <option value="complained">complained</option>
+      </select>
+      <button class="btn small ghost" id="exportBtn">Export valid (CSV)</button>
+      <button class="btn small danger" id="clearAllBtn">Clear all</button>
+    </div>
+    <div class="scrollbox" style="max-height:520px">
+      <table>
+        <thead><tr><th>Email</th><th>Name</th><th>Company</th><th>Source</th><th>Consent</th><th></th></tr></thead>
+        <tbody id="contactRows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let ALL = [];
+
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/contacts", title: "Contacts", subtitle: "Upload and manage recipients" });
+  const s = await OmniAI.refresh();
+  ALL = s.contacts || [];
+  renderTable();
+
+  const dz = document.getElementById("dropZone");
+  const fi = document.getElementById("fileInput");
+  dz.addEventListener("click", ()=> fi.click());
+  ["dragover","dragenter"].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add("drag") }));
+  ["dragleave","drop"].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove("drag") }));
+  dz.addEventListener("drop", ev => { const f = ev.dataTransfer.files[0]; if(f){ fi.files = ev.dataTransfer.files; uploadFile(f) } });
+  fi.addEventListener("change", ev => { const f = ev.target.files[0]; if(f) uploadFile(f) });
+
+  document.getElementById("searchInput").addEventListener("input", renderTable);
+  document.getElementById("consentFilter").addEventListener("change", renderTable);
+  document.getElementById("exportBtn").addEventListener("click", exportValid);
+  document.getElementById("clearAllBtn").addEventListener("click", clearAll);
+
+  document.getElementById("pasteBox").addEventListener("input", e => {
+    const found = (e.target.value.match(/[A-Za-z0-9._+\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9.\-]+/g) || []);
+    document.getElementById("pasteHint").textContent = `${found.length} email${found.length===1?"":"s"} detected`;
+  });
+  document.getElementById("pasteAddBtn").addEventListener("click", addPasted);
+  document.getElementById("singleAddBtn").addEventListener("click", addSingle);
+});
+
+async function uploadFile(file){
+  const hint = document.getElementById("uploadHint");
+  hint.innerHTML = `<span class="pill info">UPLOADING</span> ${OmniAI.escapeHtml(file.name)}…`;
+  const form = new FormData(); form.append("file", file);
+  try{
+    const r = await fetch("/api/import", {method:"POST", body: form});
+    const result = await r.json();
+    if(!r.ok){ throw new Error(result.message || "upload failed") }
+    OmniAI.toast(`Imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}`, "ok", "Upload complete");
+    renderSummary(result);
+    const s = await OmniAI.refresh();
+    ALL = s.contacts || []; renderTable();
+    hint.innerHTML = `<span class="pill ok">DONE</span> ${OmniAI.escapeHtml(file.name)}`;
+  }catch(err){
+    hint.innerHTML = `<span class="pill bad">FAILED</span> ${OmniAI.escapeHtml(err.message)}`;
+    OmniAI.toast(err.message, "bad", "Upload failed");
+  }
+}
+
+function renderSummary(r){
+  const wrap = document.getElementById("summary");
+  wrap.style.display = "grid";
+  const invalidLink = r.invalid_download_url || r.invalid_download;
+  wrap.innerHTML = `
+    <div class="pill-stat"><div class="l">Total rows</div><div class="v">${r.total_rows ?? (r.imported + r.updated + r.skipped)}</div></div>
+    <div class="pill-stat ok"><div class="l">Imported</div><div class="v">${r.imported || 0}</div></div>
+    <div class="pill-stat ok"><div class="l">Updated</div><div class="v">${r.updated || 0}</div></div>
+    <div class="pill-stat ${r.skipped?'bad':''}"><div class="l">Skipped</div><div class="v">${r.skipped || 0}</div></div>
+    <div class="pill-stat ${invalidLink?'warn':''}">
+      <div class="l">Invalid rows</div>
+      ${invalidLink ? `<a class="btn small ghost" href="${invalidLink}" style="margin-top:6px" download>Download CSV →</a>` : `<div class="v">0</div>`}
+    </div>
+  `;
+}
+
+async function addPasted(){
+  const text = document.getElementById("pasteBox").value;
+  const emails = Array.from(new Set((text.match(/[A-Za-z0-9._+\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9.\-]+/g) || []).map(e => e.toLowerCase())));
+  if(!emails.length){ OmniAI.toast("No emails detected.", "info"); return }
+  // Build a CSV and call /api/import for a single round-trip server validation.
+  const csv = "email\n" + emails.join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  await uploadFile(new File([blob], "pasted.csv", {type:"text/csv"}));
+  document.getElementById("pasteBox").value = "";
+  document.getElementById("pasteHint").textContent = "0 emails detected";
+}
+
+async function addSingle(){
+  const email = document.getElementById("singleEmail").value.trim();
+  const first = document.getElementById("singleFirst").value.trim();
+  if(!email){ OmniAI.toast("Enter an email.", "info"); return }
+  let csv = "email,first_name\n" + email + "," + first;
+  const blob = new Blob([csv], {type:"text/csv"});
+  await uploadFile(new File([blob], "single.csv", {type:"text/csv"}));
+  document.getElementById("singleEmail").value = "";
+  document.getElementById("singleFirst").value = "";
+}
+
+function renderTable(){
+  const q = document.getElementById("searchInput").value.toLowerCase().trim();
+  const cf = document.getElementById("consentFilter").value;
+  const rows = ALL.filter(c=>{
+    if(cf && c.consent_status !== cf) return false;
+    if(q){
+      const blob = `${c.email} ${c.first_name||""} ${c.last_name||""} ${c.company||""}`.toLowerCase();
+      if(!blob.includes(q)) return false;
+    }
+    return true;
+  });
+  document.getElementById("totalCount").textContent = `${rows.length} of ${ALL.length} contact${ALL.length===1?"":"s"}`;
+  document.getElementById("contactRows").innerHTML = rows.slice(0, 500).map(c=>`
+    <tr>
+      <td class="mono">${OmniAI.escapeHtml(c.email)}</td>
+      <td>${OmniAI.escapeHtml([c.first_name,c.last_name].filter(Boolean).join(" ") || "—")}</td>
+      <td>${OmniAI.escapeHtml(c.company || "—")}</td>
+      <td><span class="pill muted">${OmniAI.escapeHtml(c.source||"—")}</span></td>
+      <td><span class="pill ${OmniAI.consentClass(c.consent_status)}">${OmniAI.escapeHtml(c.consent_status||"unknown")}</span></td>
+      <td style="text-align:right"><button class="btn small ghost" data-rm="${OmniAI.escapeHtml(c.email)}">Remove</button></td>
+    </tr>
+  `).join("") || `<tr><td colspan="6" class="small" style="text-align:center;padding:24px"><strong>No contacts match the filter.</strong> Upload a CSV or paste a list.</td></tr>`;
+  document.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", async ()=>{
+    if(!confirm(`Remove ${b.dataset.rm} from contacts?`)) return;
+    // Use the chat router (regex or LLM) — works in both modes.
+    await OmniAI.api("/api/chat", {method:"POST",headers:{"Content-Type":"application/json"}, body: JSON.stringify({session_id:"contacts-page", message:`remove contact ${b.dataset.rm}`})});
+    const s = await OmniAI.refresh(); ALL = s.contacts || []; renderTable();
+    OmniAI.toast(`Removed ${b.dataset.rm}.`, "ok");
+  }));
+}
+
+function exportValid(){
+  const valid = ALL.filter(c => ["opted_in","soft_opt_in","transactional"].includes(c.consent_status));
+  if(!valid.length){ OmniAI.toast("No valid (sendable) contacts to export.", "info"); return }
+  const lines = ["email,first_name,last_name,company,consent_status"];
+  valid.forEach(c => lines.push([c.email, c.first_name||"", c.last_name||"", (c.company||"").replace(/,/g,";"), c.consent_status||"unknown"].join(",")));
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "omniai-contacts-" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+  OmniAI.toast(`Exported ${valid.length} contact(s).`, "ok");
+}
+
+async function clearAll(){
+  if(!ALL.length){ OmniAI.toast("Already empty.", "info"); return }
+  if(!confirm(`Remove ALL ${ALL.length} contacts? This cannot be undone.`)) return;
+  await OmniAI.api("/api/chat", {method:"POST",headers:{"Content-Type":"application/json"}, body: JSON.stringify({session_id:"contacts-page", message:"clear contacts"})});
+  const s = await OmniAI.refresh(); ALL = s.contacts || []; renderTable();
+  OmniAI.toast("All contacts cleared.", "ok", "Done");
+}
+</script>
+</body>
+</html>

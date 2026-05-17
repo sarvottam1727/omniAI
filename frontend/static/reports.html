@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Reports</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .bars{display:flex;align-items:flex-end;gap:4px;height:140px;padding:14px;background:rgba(0,0,0,.25);border-radius:10px;border:1px solid var(--line)}
+    .bars .bar{flex:1;border-radius:3px;background:linear-gradient(180deg,var(--accent),var(--accent-2));min-height:3px;position:relative}
+    .bars .bar.bad{background:linear-gradient(180deg,#ef4444,#f59e0b)}
+    .reason{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:9px;font-size:13px;margin-bottom:6px}
+    .reason .c{font-weight:800;color:#fda4af}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>Reports</h1>
+    <p>Delivery summary, failure-reason breakdown, and a timeline of recent sends.</p>
+  </section>
+
+  <div class="stats" id="kpis"></div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Sent vs failed</h2>
+      <p class="sub">Last 30 events plotted left-to-right.</p>
+      <div class="bars" id="bars"></div>
+    </section>
+    <section class="panel">
+      <h2>Failure reasons</h2>
+      <p class="sub">Most common errors across all campaigns.</p>
+      <div id="reasons"></div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:18px">
+    <h2>Recent events</h2>
+    <div class="scrollbox" style="max-height:480px">
+      <table>
+        <thead><tr><th>Time</th><th>Email</th><th>Event</th><th>Reason</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async ()=>{
+  OmniAI.init({ route: "/reports", title: "Reports", subtitle: "Delivery analytics" });
+  const s = await OmniAI.refresh();
+  const events = s.events || [];
+  const sent = events.filter(e => e.event === "sent");
+  const failed = events.filter(e => e.event === "failed");
+
+  document.getElementById("kpis").innerHTML = `
+    <div class="stat info"><div class="label">Total events</div><div class="val">${events.length}</div></div>
+    <div class="stat ok"><div class="label">Sent</div><div class="val">${sent.length}</div></div>
+    <div class="stat bad"><div class="label">Failed</div><div class="val">${failed.length}</div></div>
+    <div class="stat"><div class="label">Success rate</div><div class="val">${events.length ? Math.round((sent.length/events.length)*100) + "%" : "—"}</div></div>
+  `;
+
+  const recent = events.slice(-30);
+  document.getElementById("bars").innerHTML = recent.map(e => `<div class="bar ${e.event==='failed'?'bad':''}" title="${OmniAI.escapeHtml(e.email||'')} · ${OmniAI.escapeHtml(e.event||'')}" style="height:${e.event==='failed'?60:90}%"></div>`).join("") || `<div class="small" style="margin:auto">No events yet.</div>`;
+
+  // Reasons
+  const reasons = {};
+  failed.forEach(e => { const r = (e.reason||"unknown").slice(0,80); reasons[r] = (reasons[r]||0)+1 });
+  const entries = Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById("reasons").innerHTML = entries.length
+    ? entries.map(([r,c]) => `<div class="reason"><span class="mono small">${OmniAI.escapeHtml(r)}</span><span class="c">${c}</span></div>`).join("")
+    : `<div class="small">No failures yet.</div>`;
+
+  // Recent table
+  document.getElementById("rows").innerHTML = events.slice().reverse().slice(0,80).map(e => `
+    <tr>
+      <td class="small mono">${new Date(e.created_at).toLocaleString()}</td>
+      <td class="mono">${OmniAI.escapeHtml(e.email||"")}</td>
+      <td><span class="pill ${e.event==='sent'?'ok':'bad'}">${OmniAI.escapeHtml(e.event||"")}${e.test?' · test':''}</span></td>
+      <td class="small">${OmniAI.escapeHtml(e.reason||"—")}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="4" class="small" style="text-align:center;padding:20px"><strong>No events yet.</strong> Send a test or a bulk to populate the report.</td></tr>`;
+});
+</script>
+</body>
+</html>

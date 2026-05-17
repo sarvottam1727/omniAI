@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAI · Templates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+    .tcard{padding:18px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+    .tcard h3{margin:0;font-size:15px}
+    .tcard .preview{background:rgba(0,0,0,.3);border-radius:8px;padding:10px;font-size:11.5px;color:var(--ink-dim);line-height:1.5;max-height:120px;overflow:hidden;border:1px solid var(--line);font-family:'JetBrains Mono',monospace}
+  </style>
+</head>
+<body>
+<div id="appShell">
+  <section class="page-head">
+    <h1>Templates</h1>
+    <p>Reusable email templates. The chat assistant can apply any of these via <code>template &lt;name&gt;</code> during compose.</p>
+  </section>
+
+  <div class="tg" id="cards"></div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Use a template</h2>
+    <p class="sub">Templates are applied to the current campaign draft. To start one, head to <a href="/quick-launch">Quick Launch</a> or open <a href="/chat">Chat</a> and type <code>new campaign Spring update</code> followed by <code>template newsletter</code>.</p>
+    <div class="strip">
+      <a class="btn primary" href="/quick-launch">⚡ Start a campaign</a>
+      <a class="btn secondary" href="/chat">Open chat</a>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+const TEMPLATES = [
+  {key:"newsletter", name:"Newsletter", desc:"Monthly update with highlights and an unsubscribe footer.", preview:"<h2>Hi {{first_name}},</h2>\nHere's the latest from {{sender_name}} — three quick highlights for you."},
+  {key:"sales",      name:"Sales outreach", desc:"Cold-outreach friendly copy with a single ask + opt-out.", preview:"<p>Hi {{first_name}},</p>\nI'm reaching out from {{sender_name}} because I think {{company}} might benefit from what we're building."},
+  {key:"followup",   name:"Follow-up", desc:"Short bump for previous outreach.", preview:"<p>Hi {{first_name}},</p>\nJust bumping this in case it got buried. Any thoughts?"},
+  {key:"minimal",    name:"Minimal", desc:"Plain layout with just unsubscribe + address footer.", preview:"<p>Hi {{first_name}},</p>\n(write your message here)"},
+  {key:"transactional", name:"Transactional", desc:"Service notice template — no marketing footer required.", preview:"<p>Hi {{first_name}},</p>\nThis is a transactional notice regarding your account at {{company}}."},
+];
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  OmniAI.init({ route: "/templates", title: "Templates", subtitle: "Reusable copy blocks for campaigns" });
+  document.getElementById("cards").innerHTML = TEMPLATES.map(t => `
+    <article class="tcard">
+      <h3>${OmniAI.escapeHtml(t.name)}</h3>
+      <div class="small">${OmniAI.escapeHtml(t.desc)}</div>
+      <pre class="preview">${OmniAI.escapeHtml(t.preview)}</pre>
+      <div class="row-actions" style="margin-top:6px">
+        <a class="btn small primary" href="/chat" data-tpl="${t.key}">Use in chat →</a>
+      </div>
+    </article>
+  `).join("");
+});
+</script>
+</body>
+</html>
